@@ -38,9 +38,9 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
   def self.default_server_path
     return "cmssw/cms"
   end
-  
+
   def get_install_options
-    if @resource[:install_options].is_a?(Array) 
+    if @resource[:install_options].is_a?(Array)
       return @resource[:install_options][0]
     elsif @resource[:install_options].is_a?(Hash)
       return @resource[:install_options]
@@ -62,8 +62,13 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
       return
     end
     Puppet.debug("Creating #{prefix} and assigning it to #{user}")
-    execute ["mkdir", "-p", prefix]
-    execute ["chown", user, prefix]
+    begin
+      execute ["mkdir", "-p", prefix]
+      execute ["chown", user, prefix]
+    rescue Exception => e
+      Puppet.warning "Unable to create / find installation area. Please check your install_options."
+      raise e
+    end
     Puppet.debug("Fetching bootstrap from #{repository}")
     execute ["wget", "--no-check-certificate", "-O",
              File.join([prefix, "bootstrap-#{architecture}.sh"]),
