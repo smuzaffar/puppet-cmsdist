@@ -38,6 +38,17 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
   def self.default_server_path
     return "cmssw/cms"
   end
+  
+  def get_install_options
+    if @resource[:install_options].is_a?(Array) 
+      return @resource[:install_options][0]
+    elsif @resource[:install_options].is_a?(Hash)
+      return @resource[:install_options]
+    else
+      Puppet.debug "install_options not specified. Using default."
+      return {}
+    end
+  end
 
   def self.bootstrapped?(architecture, prefix)
     Puppet.debug "Checking if #{architecture} bootstrapped in #{prefix}."
@@ -70,7 +81,7 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
   end
 
   def install
-    opts = (@resource[:install_options][0] or @resource[:install_options])
+    opts = self.get_install_options
     prefix = (opts["install_prefix"] or self.class.home)
     architecture = (opts["architecture"] or self.class.default_architecture)
     user = (opts["install_user"] or self.class.default_cms_user)
@@ -81,7 +92,7 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
     architecture = (overwrite_architecture and overwrite_architecture or architecture)
     group, package, version = fullname.split "+"
     bootstrap(architecture, prefix, user, repository, server, server_path)
-    output = `sudo -u #{user} bash -c 'source #{prefix}/#{architecture}/external/apt/*/etc/profile.d/init.sh 2>&1;  apt-get update ; apt-get install -y #{fullname} 2>&1'`
+    output = `sudo -u #{user} bash -c 'source #{prefix}/#{architecture}/external/apt/*/etc/profile.d/init.sh 2>&1;  apt-get update ; apt-get install -y #{fullname} 2>&1 && apt-get clean -y'`
     Puppet.debug output
     if $?.to_i != 0
       raise Puppet::Error, "Could not install package. #{output}"
@@ -90,7 +101,7 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
   end
 
   def uninstall
-    opts = (@resource[:install_options][0] or @resource[:install_options])
+    opts = self.get_install_options
     prefix = (opts["install_prefix"] or self.class.home)
     architecture = (opts["architecture"] or self.class.default_architecture)
     user = (opts["install_user"] or self.class.default_cms_user)
@@ -109,7 +120,7 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
   end
 
   def query
-    opts = (@resource[:install_options][0] or @resource[:install_options])
+    opts = self.get_install_options
     prefix = (opts["install_prefix"] or self.class.home)
     architecture = (opts["architecture"] or self.class.default_architecture)
     user = (opts["install_user"] or self.class.default_cms_user)

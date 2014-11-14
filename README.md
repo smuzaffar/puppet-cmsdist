@@ -83,6 +83,9 @@ An complete example of a puppet manifest which works is:
     user {"someuser":
       ensure => present,
     }->
+    file {"/opt":
+      ensure => directory,
+    }->
     file {"/opt/cms":
       ensure => directory,
       owner => "someuser",
