@@ -81,7 +81,7 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
     architecture = (overwrite_architecture and overwrite_architecture or architecture)
     group, package, version = fullname.split "+"
     bootstrap(architecture, prefix, user, repository, server, server_path)
-    output = `sudo -u #{user} bash -c 'source #{prefix}/#{architecture}/external/apt/*/etc/profile.d/init.sh 2>&1;  apt-get update ; apt-get install -y #{fullname} 2>&1'`
+    output = `sudo -u #{user} bash -c 'source #{prefix}/#{architecture}/external/apt/*/etc/profile.d/init.sh 2>&1;  apt-get update ; apt-get install -y #{fullname} 2>&1 && apt-get clean -y'`
     Puppet.debug output
     if $?.to_i != 0
       raise Puppet::Error, "Could not install package. #{output}"
