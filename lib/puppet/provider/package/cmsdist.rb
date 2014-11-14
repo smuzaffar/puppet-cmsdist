@@ -32,7 +32,7 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
   end
 
   def self.default_server
-    return "https://cmsrep.cern.ch"
+    return "cmsrep.cern.ch"
   end
 
   def self.default_server_path
