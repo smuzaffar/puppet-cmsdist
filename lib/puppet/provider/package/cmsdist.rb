@@ -41,7 +41,7 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
 
   def self.bootstrapped?(architecture, prefix)
     Puppet.debug "Checking if #{architecture} bootstrapped in #{prefix}."
-    return Kernel.system "source #{prefix}/#{architecture}/external/apt/*/etc/profile.d/init.sh 2>/dev/null; which apt-get 2>/dev/null"
+    return Kernel.system "source #{prefix}/#{architecture}/external/apt/*/etc/profile.d/init.sh 2>/dev/null; which apt-get 2>&1 >/dev/null"
   end
 
   # Helper function to boostrap a CMSSW environment.
