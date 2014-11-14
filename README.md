@@ -24,6 +24,7 @@ repository, `https://cmsrep.cern.ch/cmssw/cms`.
 Notice that the installation prefix, the architecture and the installation user
 can be configured using the the `install_options` property of the package
 resource. The above is equivalent to:
+
     package {"cms+cmssw+CMSSW_7_1_0":
       ensure => present,
       provider => cmsdist,
