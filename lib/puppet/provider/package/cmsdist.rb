@@ -70,9 +70,10 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
       execute ["mkdir", "-p", prefix]
       execute ["chown", user, prefix]
     rescue Exception => e
-      Puppet.debug("Fetching bootstrap from #{repository}")
+      Puppet.warning "Unable to create / find installation area. Please check your install_options."
       raise e
     end
+    Puppet.debug("Fetching bootstrap from #{repository}")
     execute ["wget", "--no-check-certificate", "-O",
              File.join([prefix, "bootstrap-#{architecture}.sh"]),
              "#{server}/#{server_path}/bootstrap.sh"]
