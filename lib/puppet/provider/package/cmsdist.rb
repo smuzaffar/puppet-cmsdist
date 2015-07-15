@@ -134,7 +134,7 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
     group, package, version = fullname.split "+"
     cmsdistrc(architecture, prefix, user, server)
     cleanup_script = File.join([prefix, architecture, ".cmsdistrc", self.class.default_cleanup_script ])
-    cmsrep_clean = "echo rm -f #{prefix}/#{architecture}/.cmsdistrc/PKG_#{fullname}; echo perl #{cleanup_script}"
+    cmsrep_clean = "rm -f #{prefix}/#{architecture}/.cmsdistrc/PKG_#{fullname}; echo perl #{cleanup_script}"
     output = `sudo -u #{user} bash -c 'source #{prefix}/#{architecture}/external/apt/*/etc/profile.d/init.sh 2>&1;  apt-get update ; apt-get remove -y #{fullname} 2>&1 ; #{cmsrep_clean}'`
     Puppet.debug output
     if $?.to_i != 0
