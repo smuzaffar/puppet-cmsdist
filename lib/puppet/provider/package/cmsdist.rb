@@ -38,6 +38,10 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
   def self.default_server_path
     return "cmssw/cms"
   end
+  
+  def self.default_cleanup_script
+    return "cmsrpm_cleanup.pl"
+  end
 
   def get_install_options
     if @resource[:install_options].is_a?(Array)
@@ -66,10 +70,9 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
       execute ["mkdir", "-p", prefix]
       execute ["chown", user, prefix]
     rescue Exception => e
-      Puppet.warning "Unable to create / find installation area. Please check your install_options."
+      Puppet.debug("Fetching bootstrap from #{repository}")
       raise e
     end
-    Puppet.debug("Fetching bootstrap from #{repository}")
     execute ["wget", "--no-check-certificate", "-O",
              File.join([prefix, "bootstrap-#{architecture}.sh"]),
              "#{server}/#{server_path}/bootstrap.sh"]
@@ -85,6 +88,17 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
     Puppet.debug("Bootstrap completed")
   end
 
+  def cmsdistrc(architecture, prefix, user, server)
+    cmsrpm_cleanup = self.class.default_cleanup_script
+    cleanup_script = File.join([prefix, architecture, ".cmsdistrc", cmsrpm_cleanup ])
+    existance = File.exists? cleanup_script
+    if not existance
+      out = `sudo -u #{user} bash -c 'mkdir -p #{prefix}/#{architecture}/.cmsdistrc && wget --quiet --no-check-certificate -O #{cleanup_script} #{server}/#{cmsrpm_cleanup}'`
+      Puppet.debug("Downloaded #{server}/#{cmsrpm_cleanup}")
+    end
+    return
+  end
+
   def install
     opts = self.get_install_options
     prefix = (opts["install_prefix"] or self.class.home)
@@ -97,7 +111,8 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
     architecture = (overwrite_architecture and overwrite_architecture or architecture)
     group, package, version = fullname.split "+"
     bootstrap(architecture, prefix, user, repository, server, server_path)
-    output = `sudo -u #{user} bash -c 'source #{prefix}/#{architecture}/external/apt/*/etc/profile.d/init.sh 2>&1;  apt-get update ; apt-get install -y #{fullname} 2>&1 && apt-get clean -y'`
+    cmsdistrc(architecture, prefix, user, server)
+    output = `sudo -u #{user} bash -c 'source #{prefix}/#{architecture}/external/apt/*/etc/profile.d/init.sh 2>&1;  apt-get update ; apt-get install -y #{fullname} 2>&1 && touch #{prefix}/#{architecture}/.cmsdistrc/PKG_#{fullname} && apt-get clean -y'`
     Puppet.debug output
     if $?.to_i != 0
       raise Puppet::Error, "Could not install package. #{output}"
@@ -116,7 +131,10 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
     fullname, overwrite_architecture = @resource[:name].split "/"
     architecture = (overwrite_architecture and overwrite_architecture or architecture)
     group, package, version = fullname.split "+"
-    output = `sudo -u #{user} bash -c 'source #{prefix}/#{architecture}/external/apt/*/etc/profile.d/init.sh 2>&1;  apt-get update ; apt-get remove -y #{fullname} 2>&1'`
+    cmsdistrc(architecture, prefix, user, server)
+    cleanup_script = File.join([prefix, architecture, ".cmsdistrc", self.class.default_cleanup_script ])
+    cmsrep_clean = "echo rm -f #{prefix}/#{architecture}/.cmsdistrc/PKG_#{fullname}; echo perl #{cleanup_script}"
+    output = `sudo -u #{user} bash -c 'source #{prefix}/#{architecture}/external/apt/*/etc/profile.d/init.sh 2>&1;  apt-get update ; apt-get remove -y #{fullname} 2>&1 ; #{cmsrep_clean}'`
     Puppet.debug output
     if $?.to_i != 0
       raise Puppet::Error, "Could not remove package. #{output}"
@@ -136,12 +154,20 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
     fullname, overwrite_architecture = @resource[:name].split "/"
     architecture = (overwrite_architecture and overwrite_architecture or architecture)
     group, package, version = fullname.split "+"
-    bootstrap(architecture, prefix, user, repository, server, server_path)
+    cmsdistrc(architecture, prefix, user, server)
+    pkgfile = File.join([prefix, architecture, ".cmsdistrc", "PKG_#{fullname}" ])
+    pkgfile_exist = File.exists? pkgfile
     existance = File.exists? File.join([prefix, architecture, group, package,
-                                        version])
+                                        version, "etc", "profile.d", "init.sh"])
     if not existance
+      if pkgfile_exist
+        output = `sudo -u #{user} bash -c 'rm -f #{pkgfile}'`
+      end
       return nil
     else
+      if not pkgfile_exist
+        output = `sudo -u #{user} bash -c 'touch #{pkgfile}'`
+      end
       return { :ensure => "1.0", :name => @resource[:name] }
     end
   end
