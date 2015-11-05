@@ -40,7 +40,7 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
   end
   
   def self.default_cleanup_script
-    return "cmsrpm_cleanup.pl"
+    return "cmsrpm_cleanup_v2.pl"
   end
 
   def get_install_options
