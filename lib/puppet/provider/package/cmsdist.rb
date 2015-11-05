@@ -89,8 +89,8 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
     Puppet.debug("Bootstrap completed")
   end
 
-  def cmsdistrc(architecture, prefix, user, server)
-    cmsrpm_cleanup = self.class.default_cleanup_script
+  def cmsdistrc(architecture, prefix, user, server, opts)
+    cmsrpm_cleanup = (opts["cmsrep_script"] or self.class.default_cleanup_script)
     cleanup_script = File.join([prefix, architecture, ".cmsdistrc", cmsrpm_cleanup ])
     existance = File.exists? cleanup_script
     if not existance
@@ -112,7 +112,7 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
     architecture = (overwrite_architecture and overwrite_architecture or architecture)
     group, package, version = fullname.split "+"
     bootstrap(architecture, prefix, user, repository, server, server_path)
-    cmsdistrc(architecture, prefix, user, server)
+    cmsdistrc(architecture, prefix, user, server, opts)
     output = `sudo -u #{user} bash -c 'source #{prefix}/#{architecture}/external/apt/*/etc/profile.d/init.sh 2>&1;  apt-get update ; apt-get install -y #{fullname} 2>&1 && touch #{prefix}/#{architecture}/.cmsdistrc/PKG_#{fullname} && apt-get clean -y'`
     Puppet.debug output
     if $?.to_i != 0
@@ -132,7 +132,7 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
     fullname, overwrite_architecture = @resource[:name].split "/"
     architecture = (overwrite_architecture and overwrite_architecture or architecture)
     group, package, version = fullname.split "+"
-    cmsdistrc(architecture, prefix, user, server)
+    cmsdistrc(architecture, prefix, user, server, opts)
     cleanup_script = File.join([prefix, architecture, ".cmsdistrc", self.class.default_cleanup_script ])
     cmsrep_clean = "rm -f #{prefix}/#{architecture}/.cmsdistrc/PKG_#{fullname}; perl #{cleanup_script}"
     output = `sudo -u #{user} bash -c 'source #{prefix}/#{architecture}/external/apt/*/etc/profile.d/init.sh 2>&1;  apt-get update ; apt-get remove -y #{fullname} 2>&1 ; #{cmsrep_clean}'`
@@ -156,7 +156,7 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
     architecture = (overwrite_architecture and overwrite_architecture or architecture)
     group, package, version = fullname.split "+"
     bootstrap(architecture, prefix, user, repository, server, server_path)
-    cmsdistrc(architecture, prefix, user, server)
+    cmsdistrc(architecture, prefix, user, server, opts)
     pkgfile = File.join([prefix, architecture, ".cmsdistrc", "PKG_#{fullname}" ])
     pkgfile_exist = File.exists? pkgfile
     existance = File.exists? File.join([prefix, architecture, group, package,
