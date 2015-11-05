@@ -62,6 +62,7 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
   # Helper function to boostrap a CMSSW environment.
   def bootstrap(architecture, prefix, user, repository, server, server_path)
     if self.class.bootstrapped?(architecture, prefix)
+      execute ["chown","-R", user, File.join([prefix, architecture , "var/lib/rpm"])," | true"]
       Puppet.debug("Bootstrap previously done.")
       return
     end
@@ -133,7 +134,8 @@ Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Packa
     architecture = (overwrite_architecture and overwrite_architecture or architecture)
     group, package, version = fullname.split "+"
     cmsdistrc(architecture, prefix, user, server, opts)
-    cleanup_script = File.join([prefix, architecture, ".cmsdistrc", self.class.default_cleanup_script ])
+    cmsrpm_cleanup = (opts["cmsrep_script"] or self.class.default_cleanup_script)
+    cleanup_script = File.join([prefix, architecture, ".cmsdistrc", cmsrpm_cleanup ])
     cmsrep_clean = "rm -f #{prefix}/#{architecture}/.cmsdistrc/PKG_#{fullname}; perl #{cleanup_script}"
     output = `sudo -u #{user} bash -c 'source #{prefix}/#{architecture}/external/apt/*/etc/profile.d/init.sh 2>&1;  apt-get update ; apt-get remove -y #{fullname} 2>&1 ; #{cmsrep_clean}'`
     Puppet.debug output
