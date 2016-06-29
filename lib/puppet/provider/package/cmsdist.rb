@@ -2,7 +2,7 @@ require "pathname"
 require "puppet/provider/package"
 require "puppet/util/execution"
 
-Puppet::Type.type(:package).provide :cmspkg, :parent => Puppet::Provider::Package do
+Puppet::Type.type(:package).provide :cmsdist, :parent => Puppet::Provider::Package do
   include Puppet::Util::Execution
 
   desc "CMS packages via cmspkg."
